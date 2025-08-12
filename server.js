@@ -1,153 +1,136 @@
-const express = require("express");
-const mongoose = require("mongoose");
-require("dotenv").config();
+require('dotenv').config(); 
+const mongoose = require('mongoose');
 
-const app = express();
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB Atlas — by Mohanad Zeyara"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB connected!'))
+.catch(err => console.error('MongoDB connection error:', err));
 
 const personSchema = new mongoose.Schema({
   name: { type: String, required: true },
   age: Number,
-  favoriteFoods: [String],
+  favoriteFoods: [String] 
 });
 
-const Person = mongoose.model("Person", personSchema);
 
-const createAndSavePerson = async () => {
+const Person = mongoose.model('Person', personSchema);
+
+
+const createAndSavePerson = (done) => {
   const person = new Person({
     name: "Nader Zeyara",
-    age: 30,
-    favoriteFoods: ["Pizza", "Pasta"],
+    age: 25,
+    favoriteFoods: ["pizza", "pasta"]
   });
 
-  try {
-    const savedPerson = await person.save();
-    console.log("Person saved by Mohanad Zeyara:", savedPerson);
-  } catch (err) {
-    console.error(err);
-  }
+  person.save((err, data) => {
+    if (err) return done(err);
+    done(null, data);
+  });
 };
 
-const createManyPeople = async (arrayOfPeople) => {
-  try {
-    const people = await Person.create(arrayOfPeople);
-    console.log("Many people created by Mohanad Zeyara:", people);
-  } catch (err) {
-    console.error(err);
-  }
+const createManyPeople = (arrayOfPeople, done) => {
+  Person.create(arrayOfPeople, (err, people) => {
+    if (err) return done(err);
+    done(null, people);
+  });
 };
 
-const findPeopleByName = async (personName) => {
-  try {
-    const people = await Person.find({ name: personName });
-    console.log(`People named ${personName} — checked by Mohanad Zeyara:`, people);
-  } catch (err) {
-    console.error(err);
-  }
+
+const findPeopleByName = (personName, done) => {
+  Person.find({ name: personName }, (err, people) => {
+    if (err) return done(err);
+    done(null, people);
+  });
 };
 
-const findOneByFood = async (food) => {
-  try {
-    const person = await Person.findOne({ favoriteFoods: food });
-    console.log(`Found person who likes ${food} — searched by Mohanad Zeyara:`, person);
-  } catch (err) {
-    console.error(err);
-  }
+const findOneByFood = (food, done) => {
+  Person.findOne({ favoriteFoods: food }, (err, person) => {
+    if (err) return done(err);
+    done(null, person);
+  });
 };
 
-const findPersonById = async (personId) => {
-  try {
-    const person = await Person.findById(personId);
-    console.log("Found person by ID — queried by Mohanad Zeyara:", person);
-  } catch (err) {
-    console.error(err);
-  }
+const findPersonById = (personId, done) => {
+  Person.findById(personId, (err, person) => {
+    if (err) return done(err);
+    done(null, person);
+  });
 };
 
-const findEditThenSave = async (personId) => {
-  try {
-    const person = await Person.findById(personId);
-    if (!person) {
-      console.log("Person not found");
-      return;
+const findEditThenSave = (personId, done) => {
+  const foodToAdd = "hamburger";
+
+  Person.findById(personId, (err, person) => {
+    if (err) return done(err);
+
+    person.favoriteFoods.push(foodToAdd);
+
+    person.save((err, updatedPerson) => {
+      if (err) return done(err);
+      done(null, updatedPerson);
+    });
+  });
+};
+
+const findAndUpdate = (personName, done) => {
+  const ageToSet = 20;
+
+  Person.findOneAndUpdate(
+    { name: personName },
+    { age: ageToSet },
+    { new: true },
+    (err, updatedPerson) => {
+      if (err) return done(err);
+      done(null, updatedPerson);
     }
-    person.favoriteFoods.push("hamburger");
-    const updatedPerson = await person.save();
-    console.log("Updated person — edited by Mohanad Zeyara:", updatedPerson);
-  } catch (err) {
-    console.error(err);
-  }
+  );
 };
 
-const findAndUpdate = async (personName) => {
-  try {
-    const updatedPerson = await Person.findOneAndUpdate(
-      { name: personName },
-      { age: 20 },
-      { new: true }
-    );
-    console.log("Updated person — updated by Mohanad Zeyara:", updatedPerson);
-  } catch (err) {
-    console.error(err);
-  }
+const removeById = (personId, done) => {
+  Person.findByIdAndRemove(personId, (err, removedPerson) => {
+    if (err) return done(err);
+    done(null, removedPerson);
+  });
 };
 
-const removeById = async (personId) => {
-  try {
-    const removedPerson = await Person.findByIdAndRemove(personId);
-    console.log("Removed person — deleted by Mohanad Zeyara:", removedPerson);
-  } catch (err) {
-    console.error(err);
-  }
+
+const removeManyPeople = (done) => {
+  Person.remove({ name: "Mohanad" }, (err, result) => {
+    if (err) return done(err);
+    done(null, result);
+  });
 };
 
-const removeManyPeople = async () => {
-  try {
-    const result = await Person.deleteMany({ name: "Mary" });
-    console.log("Removed all Marys — cleaned by Mohanad Zeyara:", result);
-  } catch (err) {
-    console.error(err);
-  }
+const queryChain = (done) => {
+  Person.find({ favoriteFoods: "burritos" })
+    .sort('name')      
+    .limit(2)            
+    .select('-age')      
+    .exec((err, people) => {
+      if (err) return done(err);
+      done(null, people);
+    });
 };
 
-const queryChain = async () => {
-  try {
-    const data = await Person.find({ favoriteFoods: "burritos" })
-      .sort("name")
-      .limit(2)
-      .select("-age")
-      .exec();
-    console.log("Burrito lovers — found by Mohanad Zeyara:", data);
-  } catch (err) {
-    console.error(err);
-  }
+module.exports = {
+  Person,
+  createAndSavePerson,
+  createManyPeople,
+  findPeopleByName,
+  findOneByFood,
+  findPersonById,
+  findEditThenSave,
+  findAndUpdate,
+  removeById,
+  removeManyPeople,
+  queryChain,
 };
 
-(async () => {
-  await createAndSavePerson();
-
-  await createManyPeople([
-    { name: "Tamer Zeyara", age: 35, favoriteFoods: ["Burritos"] },
-    { name: "Ahmad Zeyara", age: 28, favoriteFoods: ["Pizza", "Burritos"] },
-    { name: "Anas Zeyara", age: 32, favoriteFoods: ["Pasta", "Burritos"] },
-  ]);
-
-  await findPeopleByName("Tamer Zeyara");
-  await findOneByFood("Pizza");
-
-  // await findPersonById("PUT_A_VALID_ID_HERE");
-  // await findEditThenSave("PUT_A_VALID_ID_HERE");
-  // await removeById("PUT_A_VALID_ID_HERE");
-
-  await findAndUpdate("Tamer Zeyara");
-  await removeManyPeople();
-  await queryChain();
-})();
-
-app.listen(3000, () => {
-  console.log("Server running at http://localhost:3000 — by Mohanad Zeyara");
+createAndSavePerson((err, data) => {
+  if (err) return console.error(err);
+  console.log('Created person:', data);
 });
